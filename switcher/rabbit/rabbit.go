@@ -1,8 +1,9 @@
-package rabbit
+package main
 
 import (
-	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func FailOnError(err error, msg string) {
@@ -11,35 +12,16 @@ func FailOnError(err error, msg string) {
 	}
 }
 
-func ConnectRabbitMQ() {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	FailOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+func SendRabbitMQ(ch *amqp.Channel, msg []byte) {
 
-	ch, err := conn.Channel()
-	FailOnError(err, "Failed to open a channel")
-	defer ch.Close()
-
-	q, err := ch.QueueDeclare(
-		"hello", // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
-	)
-	FailOnError(err, "Failed to declare a queue")
-
-	body := "Hello World!"
-	err = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
+	err := ch.Publish(
+		"",       // exchange
+		"Router", // routing key
+		false,    // mandatory
+		false,    // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
+			ContentType: "application/json",
+			Body:        []byte(msg),
 		})
 	FailOnError(err, "Failed to publish a message")
-	log.Printf(" [x] Sent %s\n", body)
 }
