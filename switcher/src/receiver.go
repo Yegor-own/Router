@@ -1,7 +1,8 @@
-package main
+package switcher
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -13,7 +14,9 @@ func FailOnError(err error, msg string) {
 	}
 }
 
-func ReceiveRabbitMQ() {
+func ReceiveRabbitMQ(res chan Message) {
+	fmt.Println("ReceiveRabbitMQ running")
+	defer fmt.Println("ReceiveRabbitMQ stopped")
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -23,12 +26,12 @@ func ReceiveRabbitMQ() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"Router", // name
-		false,    // durable
-		false,    // delete when unused
-		false,    // exclusive
-		false,    // no-wait
-		nil,      // arguments
+		"switcher", // name
+		false,      // durable
+		false,      // delete when unused
+		false,      // exclusive
+		false,      // no-wait
+		nil,        // arguments
 	)
 	FailOnError(err, "Failed to declare a queue")
 
@@ -43,18 +46,17 @@ func ReceiveRabbitMQ() {
 	)
 	FailOnError(err, "Failed to register a consumer")
 
-	var forever2 chan struct{}
+	var forever2 chan bool
+	defer close(forever2)
 
 	go func() {
-		var test struct {
-			Test int `json:"test"`
-		}
+		var msg Message
 		for d := range msgs {
-			json.Unmarshal(d.Body, &test)
-			log.Printf("Received a message: %v", test)
+			err := json.Unmarshal(d.Body, &msg)
+			FailOnError(err, "Failed to unmarshal json")
+			res <- msg
 		}
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
 	<-forever2
 }

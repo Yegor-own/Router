@@ -1,4 +1,4 @@
-package main
+package rabbit
 
 import (
 	"log"
@@ -12,13 +12,13 @@ func FailOnError(err error, msg string) {
 	}
 }
 
-func SendRabbitMQ(ch *amqp.Channel, msg []byte) {
+func Send(ch *amqp.Channel, msg []byte, route string) {
 
 	err := ch.Publish(
-		"",       // exchange
-		"Router", // routing key
-		false,    // mandatory
-		false,    // immediate
+		"",    // exchange
+		route, // routing key
+		false, // mandatory
+		false, // immediate
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        []byte(msg),

@@ -1,4 +1,4 @@
-module Router/rabbit-api
+module router
 
 go 1.18
 
